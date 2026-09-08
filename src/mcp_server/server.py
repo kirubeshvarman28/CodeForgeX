@@ -61,12 +61,16 @@ def create_mcp_server(
 
     server = MCPServer(
         name="software-engineering-server",
-        version="0.1.0",
+        title="CodeForgeX",
+        description="Deterministic AI-Agent Evaluation & Software Engineering Tools over Model Context Protocol",
         instructions=(
             "Software engineering tools for inspecting, analyzing, modifying, and "
             "verifying codebases within a deterministic sandbox environment."
         ),
+        website_url="https://github.com/kirubeshvarman28/CodeForgeX",
+        version="0.1.0",
     )
+
 
     @server.tool()
     def list_files(
@@ -329,6 +333,8 @@ def create_mcp_server(
             "mcp_endpoint": "/mcp",
             "transport": "streamable-http",
             "docs": "https://github.com/kirubeshvarman28/CodeForgeX",
+            "smithery_verification": "69dde62346c27143101b851dd010b4611127f550d3cc0e71bc510f774d791f0f",
+            "smithery_url": "https://smithery.ai/servers/kirubeshvarman28/codeforgex",
             "tools_count": 8,
             "tools": [
                 "list_files",
@@ -346,6 +352,7 @@ def create_mcp_server(
 <html>
 <head>
     <title>CodeForgeX MCP Server</title>
+    <meta name="smithery-verification" content="69dde62346c27143101b851dd010b4611127f550d3cc0e71bc510f774d791f0f">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
         .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; max-width: 600px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
@@ -377,10 +384,14 @@ def create_mcp_server(
             <li>&#10003; get_git_diff</li>
             <li>&#10003; get_repository_status</li>
         </ul>
-        <a href="https://github.com/kirubeshvarman28/CodeForgeX" target="_blank">View GitHub Repository &amp; Documentation &rarr;</a>
+        <div style="display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap;">
+            <a href="https://github.com/kirubeshvarman28/CodeForgeX" target="_blank">GitHub Repository &rarr;</a>
+            <a href="https://smithery.ai/servers/kirubeshvarman28/codeforgex" target="_blank">Smithery Registry &rarr;</a>
+        </div>
     </div>
 </body>
 </html>"""
+
             return HTMLResponse(content=html, status_code=200)
         return JSONResponse(content=payload, status_code=200)
 

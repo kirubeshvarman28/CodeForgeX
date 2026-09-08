@@ -6,6 +6,8 @@
 [![Benchmark Score](https://img.shields.io/badge/benchmark%20score-99.0%2F100.0-gold.svg)](tasks/)
 [![Docker Hardened](https://img.shields.io/badge/docker-non--root%20%7C%20cap__drop%20ALL-purple.svg)](Dockerfile)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![smithery badge](https://smithery.ai/badge/kirubeshvarman28/codeforgex)](https://smithery.ai/servers/kirubeshvarman28/codeforgex)
+
 
 **CodeForgeX** is an enterprise-grade, deterministic AI-agent software engineering evaluation environment and tool-calling execution harness. Built on the official **Model Context Protocol (MCP Python SDK v2)**, it provides an isolated, uncheatable sandbox where AI agents explore repositories, reproduce failures, formulate hypotheses, apply unified diff patches, and verify solutions against public and hidden test suites.
 
