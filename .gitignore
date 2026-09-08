@@ -60,3 +60,6 @@ Thumbs.db
 # Task runner workspaces and scratch
 workspace/
 scratch/
+results/*.json
+results/*.md
+!results/.gitkeep
