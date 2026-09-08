@@ -139,3 +139,65 @@ def test_workspace_lifecycle_and_baseline_bug(tmp_path: Path):
     # 6. Teardown
     manager.cleanup_task_workspace("bug_fix_001")
     assert not ws.exists()
+
+
+def test_discover_complete_benchmark_suite():
+    """Verify discovery of all 6 benchmark tasks across diverse SE categories."""
+    tasks_root = Path("tasks")
+    tasks = discover_tasks(tasks_root)
+
+    expected_tasks = {
+        "bug_fix_001",
+        "bug_fix_002",
+        "feature_001",
+        "refactor_001",
+        "perf_001",
+        "algo_001",
+    }
+    assert expected_tasks.issubset(set(tasks.keys()))
+
+    categories = {t.category for t in tasks.values()}
+    assert TaskCategory.BUG_FIX in categories
+    assert TaskCategory.FEATURE in categories
+    assert TaskCategory.REFACTOR in categories
+    assert TaskCategory.PERFORMANCE in categories
+    assert TaskCategory.ALGORITHM in categories
+
+    for task_id in expected_tasks:
+        task = tasks[task_id]
+        assert task.difficulty in (TaskDifficulty.EASY, TaskDifficulty.MEDIUM, TaskDifficulty.HARD)
+        assert len(task.public_test_targets) > 0
+        assert len(task.hidden_test_targets) > 0
+        assert load_task_solution(tasks_root / task_id) is not None
+
+
+@pytest.mark.parametrize("task_id", [
+    "bug_fix_001",
+    "bug_fix_002",
+    "feature_001",
+    "refactor_001",
+    "perf_001",
+    "algo_001",
+])
+def test_all_tasks_golden_patch_evaluation(tmp_path: Path, task_id: str):
+    """Verify each benchmark task evaluates to passing score (>= 95.0) with golden patch."""
+    from evaluator.runner import EvaluationRunner
+
+    tasks_root = Path("tasks").resolve()
+    runner = EvaluationRunner(tasks_root=tasks_root, workspace_root=tmp_path / "eval_ws")
+    golden_patch = load_task_solution(tasks_root / task_id)
+    assert golden_patch is not None
+
+    metrics = runner.evaluate_task(
+        task_id=task_id,
+        patch_to_apply=golden_patch,
+        cleanup=True,
+    )
+
+    assert metrics.success is True
+    assert metrics.score >= 95.0
+    assert metrics.regressions_detected == 0
+    assert metrics.test_tampering_detected is False
+    assert metrics.public_tests_passed == metrics.public_tests_total
+    assert metrics.hidden_tests_passed == metrics.hidden_tests_total
+

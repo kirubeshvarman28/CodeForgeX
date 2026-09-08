@@ -1,0 +1,173 @@
+diff --git a/src/dispatcher.py b/src/dispatcher.py
+index a72491b..f5a3f06 100644
+--- a/src/dispatcher.py
++++ b/src/dispatcher.py
+@@ -1,60 +1,108 @@
+-"""Monolithic Request Dispatcher module."""
+-
+-import json
+-import xml.etree.ElementTree as ET
+-from dataclasses import dataclass, field
+-from typing import Any, Dict, Optional
+-from urllib.parse import parse_qs
+-
+-
+-class UnsupportedContentTypeError(Exception):
+-    """Raised when a request specifies an unsupported Content-Type."""
+-    pass
+-
+-
+-@dataclass
+-class Request:
+-    """Incoming HTTP-like request model."""
+-    path: str
+-    content_type: str
+-    body: str = ""
+-    headers: Dict[str, str] = field(default_factory=dict)
+-
+-
+-@dataclass
+-class Response:
+-    """Dispatched response model."""
+-    status_code: int
+-    content_type: str
+-    body: Any
+-
+-
+-class RequestDispatcher:
+-    """Monolithic request dispatcher handling content types via rigid if-else branches."""
+-
+-    def dispatch(self, request: Request) -> Response:
+-        """Process incoming request and return structured response."""
+-        ct = (request.content_type or "").lower().strip()
+-
+-        if ct == "application/json":
+-            try:
+-                parsed = json.loads(request.body) if request.body else {}
+-                return Response(status_code=200, content_type="application/json", body=parsed)
+-            except Exception as e:
+-                return Response(status_code=400, content_type="application/json", body={"error": str(e)})
+-
+-        elif ct in ("application/xml", "text/xml"):
+-            try:
+-                root = ET.fromstring(request.body) if request.body else ET.Element("empty")
+-                return Response(status_code=200, content_type="application/xml", body=root.tag)
+-            except Exception as e:
+-                return Response(status_code=400, content_type="application/xml", body=f"XML Error: {e}")
+-
+-        elif ct == "application/x-www-form-urlencoded":
+-            parsed = parse_qs(request.body)
+-            # Flatten single values
+-            flattened = {k: v[0] if len(v) == 1 else v for k, v in parsed.items()}
+-            return Response(status_code=200, content_type="application/json", body=flattened)
+-
+-        else:
+-            raise UnsupportedContentTypeError(f"Unsupported content type: '{request.content_type}'")
++"""Request Dispatcher module with Strategy Pattern."""
++
++from abc import ABC, abstractmethod
++import json
++import xml.etree.ElementTree as ET
++from dataclasses import dataclass, field
++from typing import Any, Dict, List, Optional
++from urllib.parse import parse_qs
++
++
++class UnsupportedContentTypeError(Exception):
++    """Raised when a request specifies an unsupported Content-Type."""
++    pass
++
++
++@dataclass
++class Request:
++    """Incoming HTTP-like request model."""
++    path: str
++    content_type: str
++    body: str = ""
++    headers: Dict[str, str] = field(default_factory=dict)
++
++
++@dataclass
++class Response:
++    """Dispatched response model."""
++    status_code: int
++    content_type: str
++    body: Any
++
++
++class BaseRequestHandler(ABC):
++    """Abstract strategy for handling specific request types."""
++
++    @abstractmethod
++    def can_handle(self, request: Request) -> bool:
++        """Return True if this handler can process the given request."""
++        raise NotImplementedError
++
++    @abstractmethod
++    def handle(self, request: Request) -> Response:
++        """Process the request and return a structured Response."""
++        raise NotImplementedError
++
++
++class JsonRequestHandler(BaseRequestHandler):
++    def can_handle(self, request: Request) -> bool:
++        return (request.content_type or "").lower().strip() == "application/json"
++
++    def handle(self, request: Request) -> Response:
++        try:
++            parsed = json.loads(request.body) if request.body else {}
++            return Response(status_code=200, content_type="application/json", body=parsed)
++        except Exception as e:
++            return Response(status_code=400, content_type="application/json", body={"error": str(e)})
++
++
++class XmlRequestHandler(BaseRequestHandler):
++    def can_handle(self, request: Request) -> bool:
++        ct = (request.content_type or "").lower().strip()
++        return ct in ("application/xml", "text/xml")
++
++    def handle(self, request: Request) -> Response:
++        try:
++            root = ET.fromstring(request.body) if request.body else ET.Element("empty")
++            return Response(status_code=200, content_type="application/xml", body=root.tag)
++        except Exception as e:
++            return Response(status_code=400, content_type="application/xml", body=f"XML Error: {e}")
++
++
++class FormRequestHandler(BaseRequestHandler):
++    def can_handle(self, request: Request) -> bool:
++        return (request.content_type or "").lower().strip() == "application/x-www-form-urlencoded"
++
++    def handle(self, request: Request) -> Response:
++        parsed = parse_qs(request.body)
++        flattened = {k: v[0] if len(v) == 1 else v for k, v in parsed.items()}
++        return Response(status_code=200, content_type="application/json", body=flattened)
++
++
++class RequestDispatcher:
++    """Pluggable request dispatcher using the Strategy Pattern."""
++
++    def __init__(self, handlers: Optional[List[BaseRequestHandler]] = None) -> None:
++        if handlers is not None:
++            self._handlers = list(handlers)
++        else:
++            self._handlers = [
++                JsonRequestHandler(),
++                XmlRequestHandler(),
++                FormRequestHandler(),
++            ]
++
++    def register_handler(self, handler: BaseRequestHandler, prepend: bool = False) -> None:
++        """Register a new strategy handler."""
++        if prepend:
++            self._handlers.insert(0, handler)
++        else:
++            self._handlers.append(handler)
++
++    def dispatch(self, request: Request) -> Response:
++        """Process incoming request through registered strategy handlers."""
++        for handler in self._handlers:
++            if handler.can_handle(request):
++                return handler.handle(request)
++
++        raise UnsupportedContentTypeError(f"Unsupported content type: '{request.content_type}'")

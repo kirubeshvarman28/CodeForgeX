@@ -1,0 +1,12 @@
+{
+  "author": "CodeForgeX Architecture Team",
+  "version": "1.0.0",
+  "tags": [
+    "rate_limiting",
+    "concurrency",
+    "threading",
+    "token_bucket",
+    "feature"
+  ],
+  "estimated_minutes": 20
+}

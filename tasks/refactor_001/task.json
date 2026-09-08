@@ -1,0 +1,20 @@
+{
+  "task_id": "refactor_001",
+  "category": "refactor",
+  "title": "Refactor Monolithic Request Dispatcher to Pluggable Handler Strategy",
+  "description": "In the routing module (src/dispatcher.py), the `RequestDispatcher` currently uses an inflexible, monolithic `if/elif/else` chain inside `dispatch(request)`. Refactor `RequestDispatcher` to follow the Strategy/Registry pattern: define an abstract base class `BaseRequestHandler` with `can_handle(request: Request) -> bool` and `handle(request: Request) -> Response`, support registering new handlers via `register_handler(handler: BaseRequestHandler)`, and provide standard handlers for 'json', 'xml', and 'form'. Maintain 100% backward compatibility for all existing `dispatch()` calls and raise `UnsupportedContentTypeError` for unknown types.",
+  "difficulty": "medium",
+  "timeout_seconds": 300,
+  "public_test_targets": [
+    "tests/test_dispatcher.py"
+  ],
+  "hidden_test_targets": [
+    "tests/test_dispatcher_hidden.py"
+  ],
+  "metadata": {
+    "component": "dispatcher",
+    "expected_files_modified": [
+      "src/dispatcher.py"
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "task_id": "algo_001",
+  "category": "algorithm",
+  "title": "Implement Build Dependency Topological Sorter with Cycle Path Detection",
+  "description": "In the dependency resolution module (src/dep_resolver.py), implement the `DependencyResolver` class. Given a dependency graph mapping package names to lists of dependencies `{pkg: [dep1, dep2, ...]}`, implement `resolve_build_order(graph: Dict[str, List[str]]) -> List[str]`. All dependencies must precede the target package in the resulting list. When multiple valid topological orders are possible, break ties alphabetically to ensure deterministic order. If a circular dependency exists in the graph, raise `CircularDependencyError` and populate its `cycle_path: List[str]` attribute with the exact cycle nodes (e.g. `['A', 'B', 'C', 'A']`).",
+  "difficulty": "medium",
+  "timeout_seconds": 300,
+  "public_test_targets": [
+    "tests/test_dep_resolver.py"
+  ],
+  "hidden_test_targets": [
+    "tests/test_dep_resolver_hidden.py"
+  ],
+  "metadata": {
+    "component": "dep_resolver",
+    "expected_files_modified": [
+      "src/dep_resolver.py"
+    ]
+  }
+}

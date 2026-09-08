@@ -1,0 +1,9 @@
+[project]
+name = "rate-limiter-service"
+version = "0.1.0"
+description = "Token bucket rate limiting module"
+requires-python = ">=3.10"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

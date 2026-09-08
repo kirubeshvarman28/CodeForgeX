@@ -1,0 +1,240 @@
+diff --git a/src/lru_cache.py b/src/lru_cache.py
+index ca8836b..c5e0744 100644
+--- a/src/lru_cache.py
++++ b/src/lru_cache.py
+@@ -1,117 +1,118 @@
+-"""Thread-safe LRU Cache with TTL support."""
+-
+-import threading
+-import time
+-from typing import Any, Callable, Dict, Optional
+-
+-
+-class _Node:
+-    """Doubly linked list node for LRU ordering."""
+-
+-    def __init__(
+-        self,
+-        key: str = "",
+-        value: Any = None,
+-        expiry: Optional[float] = None,
+-    ) -> None:
+-        self.key = key
+-        self.value = value
+-        self.expiry = expiry
+-        self.prev: Optional[_Node] = None
+-        self.next: Optional[_Node] = None
+-
+-
+-class LRUCache:
+-    """Thread-safe Least Recently Used (LRU) cache with optional time-to-live (TTL)."""
+-
+-    def __init__(
+-        self,
+-        capacity: int,
+-        time_func: Optional[Callable[[], float]] = None,
+-    ) -> None:
+-        """Initialize LRU cache with given capacity.
+-
+-        Args:
+-            capacity: Maximum number of entries before eviction occurs.
+-            time_func: Monotonic time supplier (defaults to time.monotonic).
+-        """
+-        if capacity <= 0:
+-            raise ValueError("Capacity must be positive integer.")
+-
+-        self.capacity = capacity
+-        self.time_func = time_func or time.monotonic
+-        self._lock = threading.Lock()
+-        self.cache: Dict[str, _Node] = {}
+-
+-        # Sentinel dummy nodes: head (MRU) <-> tail (LRU)
+-        self.head = _Node()
+-        self.tail = _Node()
+-        self.head.next = self.tail
+-        self.tail.prev = self.head
+-
+-    def _remove_node(self, node: _Node) -> None:
+-        """Remove an existing node from the linked list."""
+-        prev_node = node.prev
+-        next_node = node.next
+-        if prev_node and next_node:
+-            prev_node.next = next_node
+-            next_node.prev = prev_node
+-
+-    def _add_to_head(self, node: _Node) -> None:
+-        """Add node right after head (marking it most recently used)."""
+-        node.next = self.head.next
+-        node.prev = self.head
+-        if self.head.next:
+-            self.head.next.prev = node
+-        self.head.next = node
+-
+-    def _move_to_head(self, node: _Node) -> None:
+-        """Move an existing node to head."""
+-        self._remove_node(node)
+-        self._add_to_head(node)
+-
+-    def get(self, key: str) -> Optional[Any]:
+-        """Retrieve value by key, updating recency order. Returns None if missing or expired."""
+-        with self._lock:
+-            if key not in self.cache:
+-                return None
+-
+-            node = self.cache[key]
+-
+-            # Check TTL expiration
+-            if node.expiry is not None and self.time_func() > node.expiry:
+-                # BUG 1: Does not purge the expired node from dictionary or linked list
+-                return None
+-
+-            self._move_to_head(node)
+-            return node.value
+-
+-    def put(self, key: str, value: Any, ttl: Optional[float] = None) -> None:
+-        """Insert or update key-value pair with optional TTL in seconds."""
+-        expiry = self.time_func() + ttl if ttl is not None and ttl > 0 else None
+-
+-        with self._lock:
+-            if key in self.cache:
+-                node = self.cache[key]
+-                node.value = value
+-                node.expiry = expiry
+-                self._move_to_head(node)
+-                return
+-
+-            # Check capacity eviction
+-            if len(self.cache) >= self.capacity:
+-                # BUG 2: Evicts self.head.next (MRU) instead of self.tail.prev (LRU)!
+-                lru_node = self.head.next
+-                if lru_node and lru_node != self.tail:
+-                    self._remove_node(lru_node)
+-                    if lru_node.key in self.cache:
+-                        del self.cache[lru_node.key]
+-
+-            new_node = _Node(key=key, value=value, expiry=expiry)
+-            self.cache[key] = new_node
+-            self._add_to_head(new_node)
+-
+-    def size(self) -> int:
+-        """Return count of active entries currently held in cache."""
+-        with self._lock:
+-            return len(self.cache)
++"""Thread-safe LRU Cache with TTL support."""
++
++import threading
++import time
++from typing import Any, Callable, Dict, Optional
++
++
++class _Node:
++    """Doubly linked list node for LRU ordering."""
++
++    def __init__(
++        self,
++        key: str = "",
++        value: Any = None,
++        expiry: Optional[float] = None,
++    ) -> None:
++        self.key = key
++        self.value = value
++        self.expiry = expiry
++        self.prev: Optional[_Node] = None
++        self.next: Optional[_Node] = None
++
++
++class LRUCache:
++    """Thread-safe Least Recently Used (LRU) cache with optional time-to-live (TTL)."""
++
++    def __init__(
++        self,
++        capacity: int,
++        time_func: Optional[Callable[[], float]] = None,
++    ) -> None:
++        """Initialize LRU cache with given capacity.
++
++        Args:
++            capacity: Maximum number of entries before eviction occurs.
++            time_func: Monotonic time supplier (defaults to time.monotonic).
++        """
++        if capacity <= 0:
++            raise ValueError("Capacity must be positive integer.")
++
++        self.capacity = capacity
++        self.time_func = time_func or time.monotonic
++        self._lock = threading.Lock()
++        self.cache: Dict[str, _Node] = {}
++
++        # Sentinel dummy nodes: head (MRU) <-> tail (LRU)
++        self.head = _Node()
++        self.tail = _Node()
++        self.head.next = self.tail
++        self.tail.prev = self.head
++
++    def _remove_node(self, node: _Node) -> None:
++        """Remove an existing node from the linked list."""
++        prev_node = node.prev
++        next_node = node.next
++        if prev_node and next_node:
++            prev_node.next = next_node
++            next_node.prev = prev_node
++
++    def _add_to_head(self, node: _Node) -> None:
++        """Add node right after head (marking it most recently used)."""
++        node.next = self.head.next
++        node.prev = self.head
++        if self.head.next:
++            self.head.next.prev = node
++        self.head.next = node
++
++    def _move_to_head(self, node: _Node) -> None:
++        """Move an existing node to head."""
++        self._remove_node(node)
++        self._add_to_head(node)
++
++    def get(self, key: str) -> Optional[Any]:
++        """Retrieve value by key, updating recency order. Returns None if missing or expired."""
++        with self._lock:
++            if key not in self.cache:
++                return None
++
++            node = self.cache[key]
++
++            # Check TTL expiration
++            if node.expiry is not None and self.time_func() > node.expiry:
++                self._remove_node(node)
++                if key in self.cache:
++                    del self.cache[key]
++                return None
++
++            self._move_to_head(node)
++            return node.value
++
++    def put(self, key: str, value: Any, ttl: Optional[float] = None) -> None:
++        """Insert or update key-value pair with optional TTL in seconds."""
++        expiry = self.time_func() + ttl if ttl is not None and ttl > 0 else None
++
++        with self._lock:
++            if key in self.cache:
++                node = self.cache[key]
++                node.value = value
++                node.expiry = expiry
++                self._move_to_head(node)
++                return
++
++            # Check capacity eviction
++            if len(self.cache) >= self.capacity:
++                lru_node = self.tail.prev
++                if lru_node and lru_node != self.head:
++                    self._remove_node(lru_node)
++                    if lru_node.key in self.cache:
++                        del self.cache[lru_node.key]
++
++            new_node = _Node(key=key, value=value, expiry=expiry)
++            self.cache[key] = new_node
++            self._add_to_head(new_node)
++
++    def size(self) -> int:
++        """Return count of active entries currently held in cache."""
++        with self._lock:
++            return len(self.cache)

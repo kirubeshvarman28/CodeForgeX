@@ -1,0 +1,12 @@
+{
+  "author": "CodeForgeX Architecture Team",
+  "version": "1.0.0",
+  "tags": [
+    "performance",
+    "algorithms",
+    "sliding_window",
+    "hash_map",
+    "optimization"
+  ],
+  "estimated_minutes": 15
+}

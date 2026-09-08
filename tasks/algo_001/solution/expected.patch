@@ -1,0 +1,136 @@
+diff --git a/src/dep_resolver.py b/src/dep_resolver.py
+index 44d4813..fd5f8ef 100644
+--- a/src/dep_resolver.py
++++ b/src/dep_resolver.py
+@@ -1,31 +1,100 @@
+-"""Dependency resolution and topological sorting module."""
+-
+-from typing import Dict, List, Optional
+-
+-
+-class CircularDependencyError(Exception):
+-    """Raised when a circular dependency is detected in the graph."""
+-
+-    def __init__(self, message: str, cycle_path: Optional[List[str]] = None) -> None:
+-        super().__init__(message)
+-        self.cycle_path = cycle_path or []
+-
+-
+-class DependencyResolver:
+-    """Resolves linear build execution order from a package dependency graph."""
+-
+-    def resolve_build_order(self, graph: Dict[str, List[str]]) -> List[str]:
+-        """Compute deterministic linear build order for the given dependency graph.
+-
+-        Args:
+-            graph: Mapping of package name to list of required direct dependencies.
+-                   Example: {"web": ["auth", "db"], "auth": ["db"], "db": []}
+-
+-        Returns:
+-            List of packages in valid build order (dependencies precede dependents).
+-            Ties are broken alphabetically.
+-
+-        Raises:
+-            CircularDependencyError: If a dependency cycle is detected.
+-        """
+-        raise NotImplementedError("DependencyResolver.resolve_build_order is not implemented yet.")
++"""Dependency resolution and topological sorting module."""
++
++import heapq
++from typing import Dict, List, Optional
++
++
++class CircularDependencyError(Exception):
++    """Raised when a circular dependency is detected in the graph."""
++
++    def __init__(self, message: str, cycle_path: Optional[List[str]] = None) -> None:
++        super().__init__(message)
++        self.cycle_path = cycle_path or []
++
++
++class DependencyResolver:
++    """Resolves linear build execution order from a package dependency graph."""
++
++    def resolve_build_order(self, graph: Dict[str, List[str]]) -> List[str]:
++        """Compute deterministic linear build order for the given dependency graph.
++
++        Args:
++            graph: Mapping of package name to list of required direct dependencies.
++                   Example: {"web": ["auth", "db"], "auth": ["db"], "db": []}
++
++        Returns:
++            List of packages in valid build order (dependencies precede dependents).
++            Ties are broken alphabetically.
++
++        Raises:
++            CircularDependencyError: If a dependency cycle is detected.
++        """
++        all_nodes = set(graph.keys())
++        for deps in graph.values():
++            all_nodes.update(deps)
++
++        in_degree = {node: 0 for node in all_nodes}
++        dependents: Dict[str, List[str]] = {node: [] for node in all_nodes}
++
++        for pkg, deps in graph.items():
++            unique_deps = set(deps)
++            in_degree[pkg] = len(unique_deps)
++            for dep in unique_deps:
++                dependents[dep].append(pkg)
++
++        ready_heap = [node for node, deg in in_degree.items() if deg == 0]
++        heapq.heapify(ready_heap)
++
++        build_order: List[str] = []
++
++        while ready_heap:
++            current = heapq.heappop(ready_heap)
++            build_order.append(current)
++
++            for dependent in dependents[current]:
++                in_degree[dependent] -= 1
++                if in_degree[dependent] == 0:
++                    heapq.heappush(ready_heap, dependent)
++
++        if len(build_order) < len(all_nodes):
++            remaining = {node for node, deg in in_degree.items() if deg > 0}
++            cycle_path = self._find_cycle(graph, remaining)
++            raise CircularDependencyError(
++                f"Circular dependency detected: {' -> '.join(cycle_path)}",
++                cycle_path=cycle_path,
++            )
++
++        return build_order
++
++    def _find_cycle(self, graph: Dict[str, List[str]], remaining: set) -> List[str]:
++        visited: Dict[str, int] = {}
++        cycle_path: List[str] = []
++
++        def dfs(u: str, path: List[str]) -> None:
++            nonlocal cycle_path
++            if cycle_path:
++                return
++            visited[u] = 1
++            path.append(u)
++
++            for v in graph.get(u, []):
++                if v in remaining:
++                    if visited.get(v, 0) == 1:
++                        idx = path.index(v)
++                        cycle_path = path[idx:] + [v]
++                        return
++                    elif visited.get(v, 0) == 0:
++                        dfs(v, path)
++                        if cycle_path:
++                            return
++
++            path.pop()
++            visited[u] = 2
++
++        for node in sorted(remaining):
++            if visited.get(node, 0) == 0:
++                dfs(node, [])
++                if cycle_path:
++                    break
++
++        return cycle_path if cycle_path else list(remaining)

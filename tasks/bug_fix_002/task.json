@@ -1,0 +1,20 @@
+{
+  "task_id": "bug_fix_002",
+  "category": "bug_fix",
+  "title": "Fix TTL Expiration Cleanup and Eviction Order in Concurrent LRU Cache",
+  "description": "In the caching module (src/lru_cache.py), the `LRUCache` class contains two bugs: 1) In `get(key)`, when an entry has expired past its TTL, it returns None but fails to delete the expired node from the internal cache dictionary and doubly linked list, causing expired items to linger and consume capacity. 2) In `put(key, value, ttl=None)`, when evicting to make room for a new item, it mistakenly removes the most recently used entry instead of the least recently used entry. Fix both issues so that expired items are purged immediately on access, and capacity eviction deterministically removes the least recently used item.",
+  "difficulty": "medium",
+  "timeout_seconds": 300,
+  "public_test_targets": [
+    "tests/test_lru_cache.py"
+  ],
+  "hidden_test_targets": [
+    "tests/test_lru_cache_hidden.py"
+  ],
+  "metadata": {
+    "component": "lru_cache",
+    "expected_files_modified": [
+      "src/lru_cache.py"
+    ]
+  }
+}

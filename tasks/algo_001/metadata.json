@@ -1,0 +1,12 @@
+{
+  "author": "CodeForgeX Architecture Team",
+  "version": "1.0.0",
+  "tags": [
+    "algorithms",
+    "graph",
+    "topological_sort",
+    "dag",
+    "cycle_detection"
+  ],
+  "estimated_minutes": 25
+}

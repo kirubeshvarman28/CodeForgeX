@@ -1,0 +1,12 @@
+{
+  "author": "CodeForgeX Architecture Team",
+  "version": "1.0.0",
+  "tags": [
+    "refactoring",
+    "design_patterns",
+    "strategy_pattern",
+    "architecture",
+    "extensibility"
+  ],
+  "estimated_minutes": 20
+}

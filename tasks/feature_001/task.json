@@ -1,0 +1,20 @@
+{
+  "task_id": "feature_001",
+  "category": "feature",
+  "title": "Implement Thread-Safe Token Bucket Rate Limiter with Burst Capacity",
+  "description": "In the rate limiting module (src/rate_limiter.py), implement a thread-safe `TokenBucketRateLimiter` class. The limiter controls throughput based on a configured `rate` (tokens per second) and `capacity` (maximum burst capacity). It must support `acquire(tokens=1.0) -> bool` (non-blocking), `try_acquire(tokens=1.0, max_wait_seconds=0.0) -> bool` (waits up to timeout), and `available_tokens() -> float`. The bucket starts completely full. Concurrency must be protected with threading locks.",
+  "difficulty": "medium",
+  "timeout_seconds": 300,
+  "public_test_targets": [
+    "tests/test_rate_limiter.py"
+  ],
+  "hidden_test_targets": [
+    "tests/test_rate_limiter_hidden.py"
+  ],
+  "metadata": {
+    "component": "rate_limiter",
+    "expected_files_modified": [
+      "src/rate_limiter.py"
+    ]
+  }
+}
