@@ -15,14 +15,24 @@ from mcp.server.mcpserver import MCPServer
 from mcp_server.security.sandbox import PathTraversalError, SecuritySandboxError
 from mcp_server.tools.filesystem import list_files_impl, read_file_impl
 from mcp_server.tools.search import search_code_impl
+from mcp_server.tools.testing import (
+    GLOBAL_TEST_STORE,
+    TestRunStore,
+    get_test_output_impl,
+    run_tests_impl,
+)
 
 
-def create_mcp_server(repo_root: Optional[Path | str] = None) -> MCPServer:
+def create_mcp_server(
+    repo_root: Optional[Path | str] = None,
+    test_store: Optional[TestRunStore] = None,
+) -> MCPServer:
     """Create and configure an MCPServer instance bounded to the given repository root.
 
     Args:
         repo_root: Root directory that bounds all tool operations. If None,
                    reads from REPO_ROOT env var or defaults to current working directory.
+        test_store: Optional custom TestRunStore for test execution records.
 
     Returns:
         Configured MCPServer ready to run over stdio or SSE.
@@ -33,12 +43,14 @@ def create_mcp_server(repo_root: Optional[Path | str] = None) -> MCPServer:
     else:
         resolved_root = Path(repo_root).resolve()
 
+    store = test_store if test_store is not None else GLOBAL_TEST_STORE
+
     server = MCPServer(
         name="software-engineering-server",
         version="0.1.0",
         instructions=(
-            "Software engineering tools for inspecting, analyzing, and modifying "
-            "codebases within a deterministic sandbox environment."
+            "Software engineering tools for inspecting, analyzing, modifying, and "
+            "verifying codebases within a deterministic sandbox environment."
         ),
     )
 
@@ -135,12 +147,71 @@ def create_mcp_server(repo_root: Optional[Path | str] = None) -> MCPServer:
         except Exception as err:
             return json.dumps({"error": f"Unexpected error: {err}", "success": False})
 
+    @server.tool()
+    def run_tests(
+        test_target: str = "",
+        timeout_seconds: int = 30,
+    ) -> str:
+        """Execute automated pytest tests within the repository sandbox.
+
+        Args:
+            test_target: Optional relative test file or test node (e.g. 'tests/test_math.py::test_add').
+            timeout_seconds: Maximum time allowed before terminating process (default: 30s).
+
+        Returns:
+            JSON string with exit code, passed/failed counts, duration, and output summary.
+        """
+        try:
+            result = run_tests_impl(
+                repo_root=resolved_root,
+                test_target=test_target,
+                timeout_seconds=timeout_seconds,
+                store=store,
+            )
+            return json.dumps(result, indent=2)
+        except (PathTraversalError, FileNotFoundError, SecuritySandboxError) as err:
+            return json.dumps({"error": str(err), "success": False})
+        except Exception as err:
+            return json.dumps({"error": f"Unexpected error: {err}", "success": False})
+
+    @server.tool()
+    def get_test_output(
+        run_id: str = "",
+        full: bool = False,
+    ) -> str:
+        """Retrieve test execution output and logs from a previous test run.
+
+        Args:
+            run_id: Specific test run identifier (empty string defaults to most recent run).
+            full: If True, returns full untruncated stdout and stderr (default: False).
+
+        Returns:
+            JSON string containing logs, exit code, duration, and pass/fail counts.
+        """
+        try:
+            result = get_test_output_impl(
+                store=store,
+                run_id=run_id if run_id.strip() else None,
+                full=full,
+            )
+            return json.dumps(result, indent=2)
+        except KeyError as err:
+            return json.dumps({"error": str(err), "success": False})
+        except Exception as err:
+            return json.dumps({"error": f"Unexpected error: {err}", "success": False})
+
     @server.resource(uri="repo://overview")
     def get_repo_overview() -> str:
         """Resource providing high-level repository metadata and bounded root location."""
         return json.dumps({
             "bounded_root": str(resolved_root),
-            "available_tools": ["list_files", "read_file", "search_code"],
+            "available_tools": [
+                "list_files",
+                "read_file",
+                "search_code",
+                "run_tests",
+                "get_test_output",
+            ],
             "status": "ready",
         }, indent=2)
 
@@ -152,7 +223,8 @@ def create_mcp_server(repo_root: Optional[Path | str] = None) -> MCPServer:
             "Workflow:\n"
             "1. Use `list_files` to discover the top-level modules and directory structure.\n"
             "2. Use `search_code` to locate key function/class definitions relevant to the objective.\n"
-            "3. Use `read_file` to inspect the relevant files and understand current logic before modifying anything."
+            "3. Use `read_file` to inspect the relevant files and understand current logic before modifying anything.\n"
+            "4. Use `run_tests` to observe current test suite results and verify baseline behavior."
         )
 
     return server

@@ -15,6 +15,8 @@ def dummy_repo(tmp_path: Path) -> Path:
     (repo / "src").mkdir()
     (repo / "src" / "calc.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
     (repo / "README.md").write_text("# Calc Project\n", encoding="utf-8")
+    (repo / "tests").mkdir()
+    (repo / "tests" / "test_calc.py").write_text("from calc import add\ndef test_add(): assert add(1, 2) == 3\n", encoding="utf-8")
 
     return repo
 
@@ -29,10 +31,14 @@ async def test_mcp_server_lists_tools(dummy_repo: Path):
     assert "list_files" in tool_names
     assert "read_file" in tool_names
     assert "search_code" in tool_names
+    assert "run_tests" in tool_names
+    assert "get_test_output" in tool_names
 
     # Check descriptions
     list_tool = next(t for t in tools if t.name == "list_files")
     assert "List files" in list_tool.description
+    run_tool = next(t for t in tools if t.name == "run_tests")
+    assert "pytest" in run_tool.description
 
 
 @pytest.mark.anyio
@@ -105,3 +111,30 @@ async def test_mcp_server_resources_and_prompts(dummy_repo: Path):
     prompts = await server.list_prompts()
     prompt_names = [p.name for p in prompts]
     assert "explore_repository_prompt" in prompt_names
+
+
+@pytest.mark.anyio
+async def test_mcp_server_call_run_tests_and_get_output(dummy_repo: Path):
+    """Verify calling run_tests and get_test_output through server.call_tool."""
+    from mcp_server.tools.testing import TestRunStore
+    store = TestRunStore()
+    server = create_mcp_server(dummy_repo, test_store=store)
+
+    # 1. Call run_tests
+    run_res = await server.call_tool("run_tests", {"test_target": "tests/test_calc.py"})
+    assert not run_res.is_error
+    data = json.loads(run_res.content[0].text)
+
+    assert data["exit_code"] == 0
+    assert data["passed"] == 1
+    assert data["failed"] == 0
+    run_id = data["run_id"]
+
+    # 2. Call get_test_output for the latest run
+    out_res = await server.call_tool("get_test_output", {"run_id": run_id, "full": True})
+    assert not out_res.is_error
+    out_data = json.loads(out_res.content[0].text)
+    assert out_data["run_id"] == run_id
+    assert out_data["passed"] == 1
+    assert "1 passed" in out_data["stdout"]
+
