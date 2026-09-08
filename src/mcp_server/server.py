@@ -12,7 +12,14 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from mcp.server.mcpserver import MCPServer
-from mcp_server.security.sandbox import PathTraversalError, SecuritySandboxError
+from mcp_server.security.sandbox import (
+    DEFAULT_SECURITY_POLICY,
+    PathTraversalError,
+    ProtectedResourceError,
+    ResourceLimitExceededError,
+    SecurityPolicy,
+    SecuritySandboxError,
+)
 from mcp_server.tools.filesystem import list_files_impl, read_file_impl
 from mcp_server.tools.git import get_git_diff_impl, get_repository_status_impl
 from mcp_server.tools.patching import apply_patch_impl
@@ -28,6 +35,7 @@ from mcp_server.tools.testing import (
 def create_mcp_server(
     repo_root: Optional[Path | str] = None,
     test_store: Optional[TestRunStore] = None,
+    security_policy: Optional[SecurityPolicy] = None,
 ) -> MCPServer:
     """Create and configure an MCPServer instance bounded to the given repository root.
 
@@ -35,6 +43,7 @@ def create_mcp_server(
         repo_root: Root directory that bounds all tool operations. If None,
                    reads from REPO_ROOT env var or defaults to current working directory.
         test_store: Optional custom TestRunStore for test execution records.
+        security_policy: Optional custom SecurityPolicy.
 
     Returns:
         Configured MCPServer ready to run over stdio or SSE.
@@ -46,6 +55,7 @@ def create_mcp_server(
         resolved_root = Path(repo_root).resolve()
 
     store = test_store if test_store is not None else GLOBAL_TEST_STORE
+    policy = security_policy if security_policy is not None else DEFAULT_SECURITY_POLICY
 
     server = MCPServer(
         name="software-engineering-server",
@@ -78,9 +88,10 @@ def create_mcp_server(
                 directory=directory,
                 recursive=recursive,
                 max_depth=max_depth,
+                policy=policy,
             )
             return json.dumps(result, indent=2)
-        except (PathTraversalError, FileNotFoundError, NotADirectoryError, SecuritySandboxError) as err:
+        except (PathTraversalError, FileNotFoundError, NotADirectoryError, ProtectedResourceError, SecuritySandboxError) as err:
             return json.dumps({"error": str(err), "success": False})
         except Exception as err:
             return json.dumps({"error": f"Unexpected error: {err}", "success": False})
@@ -107,9 +118,10 @@ def create_mcp_server(
                 path=path,
                 start_line=start_line,
                 end_line=end_line,
+                policy=policy,
             )
             return json.dumps(result, indent=2)
-        except (PathTraversalError, FileNotFoundError, IsADirectoryError, ValueError, SecuritySandboxError) as err:
+        except (PathTraversalError, FileNotFoundError, IsADirectoryError, ValueError, ProtectedResourceError, ResourceLimitExceededError, SecuritySandboxError) as err:
             return json.dumps({"error": str(err), "success": False})
         except Exception as err:
             return json.dumps({"error": f"Unexpected error: {err}", "success": False})
@@ -142,9 +154,10 @@ def create_mcp_server(
                 is_regex=is_regex,
                 case_sensitive=case_sensitive,
                 max_results=max_results,
+                policy=policy,
             )
             return json.dumps(result, indent=2)
-        except (PathTraversalError, FileNotFoundError, ValueError, SecuritySandboxError) as err:
+        except (PathTraversalError, FileNotFoundError, ValueError, ProtectedResourceError, SecuritySandboxError) as err:
             return json.dumps({"error": str(err), "success": False})
         except Exception as err:
             return json.dumps({"error": f"Unexpected error: {err}", "success": False})
@@ -221,9 +234,10 @@ def create_mcp_server(
                 repo_root=resolved_root,
                 patch=patch,
                 file_path=file_path.strip() if file_path.strip() else None,
+                policy=policy,
             )
             return json.dumps(result, indent=2)
-        except (PathTraversalError, ValueError, SecuritySandboxError) as err:
+        except (PathTraversalError, ValueError, ProtectedResourceError, ResourceLimitExceededError, SecuritySandboxError) as err:
             return json.dumps({"error": str(err), "success": False})
         except Exception as err:
             return json.dumps({"error": f"Unexpected error: {err}", "success": False})

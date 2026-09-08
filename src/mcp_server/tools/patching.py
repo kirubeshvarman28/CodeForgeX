@@ -9,7 +9,14 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from mcp_server.security.sandbox import PathTraversalError, resolve_safe_path
+from mcp_server.security.sandbox import (
+    DEFAULT_SECURITY_POLICY,
+    PathTraversalError,
+    ProtectedResourceError,
+    ResourceLimitExceededError,
+    SecurityPolicy,
+    resolve_safe_path,
+)
 
 
 def extract_patch_target_paths(patch_content: str) -> Set[str]:
@@ -46,6 +53,7 @@ def apply_patch_impl(
     repo_root: Path | str,
     patch: str,
     file_path: Optional[str] = None,
+    policy: Optional[SecurityPolicy] = None,
 ) -> Dict[str, Any]:
     """Validate and atomically apply a unified diff patch within repository boundaries.
 
@@ -53,27 +61,38 @@ def apply_patch_impl(
         repo_root: Root directory of the repository.
         patch: Unified diff patch string.
         file_path: Optional relative target path if patch is scoped to a single file.
+        policy: Optional active SecurityPolicy.
 
     Returns:
         Structured result dict with success status, changed files, and validation message.
 
     Raises:
         ValueError: If patch is empty.
+        ResourceLimitExceededError: If patch size exceeds policy limits.
         PathTraversalError: If any target file escapes repo_root.
+        ProtectedResourceError: If attempting to patch protected evaluator files.
     """
     if not patch.strip():
         raise ValueError("Patch content cannot be empty.")
 
     root = Path(repo_root).resolve()
+    effective_policy = policy if policy is not None else DEFAULT_SECURITY_POLICY
+
+    patch_bytes = patch.encode("utf-8")
+    if len(patch_bytes) > effective_policy.max_file_write_bytes:
+        raise ResourceLimitExceededError(
+            f"Patch size of {len(patch_bytes)} bytes exceeds allowed limit of "
+            f"{effective_policy.max_file_write_bytes} bytes."
+        )
 
     # If file_path is explicitly provided, validate it first
     if file_path:
-        resolve_safe_path(root, file_path, must_exist=False)
+        resolve_safe_path(root, file_path, must_exist=False, policy=effective_policy)
 
     # Extract all paths mentioned in the diff headers and enforce containment
     extracted_paths = extract_patch_target_paths(patch)
     for target in extracted_paths:
-        resolve_safe_path(root, target, must_exist=False)
+        resolve_safe_path(root, target, must_exist=False, policy=effective_policy)
 
     # Normalize patch content to ensure standard Unix line endings
     normalized_patch = patch.replace("\r\n", "\n")

@@ -5,9 +5,15 @@ Provides deterministic line-by-line regex and literal search across repository f
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from mcp_server.security.sandbox import is_ignored_path, resolve_safe_path
+from mcp_server.security.sandbox import (
+    DEFAULT_SECURITY_POLICY,
+    SecurityPolicy,
+    is_ignored_path,
+    is_protected_resource,
+    resolve_safe_path,
+)
 
 DEFAULT_MAX_MATCHES = 50
 
@@ -19,6 +25,7 @@ def search_code_impl(
     is_regex: bool = False,
     case_sensitive: bool = False,
     max_results: int = DEFAULT_MAX_MATCHES,
+    policy: Optional[SecurityPolicy] = None,
 ) -> Dict[str, Any]:
     """Search for literal string or regex pattern across repository files.
 
@@ -29,6 +36,7 @@ def search_code_impl(
         is_regex: Whether query should be interpreted as a regular expression.
         case_sensitive: Whether search should be case-sensitive.
         max_results: Maximum number of match items to return.
+        policy: Optional active SecurityPolicy.
 
     Returns:
         Structured dict with query parameters, total_matches, is_truncated, and matches list.
@@ -37,7 +45,8 @@ def search_code_impl(
         raise ValueError("Search query cannot be empty.")
 
     root = Path(repo_root).resolve()
-    target = resolve_safe_path(root, path, must_exist=True)
+    effective_policy = policy if policy is not None else DEFAULT_SECURITY_POLICY
+    target = resolve_safe_path(root, path, must_exist=True, policy=effective_policy)
 
     # Compile regex or prepare match predicate
     flags = 0 if case_sensitive else re.IGNORECASE
@@ -60,10 +69,13 @@ def search_code_impl(
         files_to_scan = []
         for file_path in sorted(target.rglob("*")):
             if file_path.is_file():
-                # Verify that no parent directory component is ignored
                 rel_to_root = file_path.relative_to(root)
-                if not is_ignored_path(rel_to_root):
-                    files_to_scan.append(file_path)
+                # Skip ignored and protected files
+                if is_ignored_path(rel_to_root, effective_policy.ignored_dirs):
+                    continue
+                if effective_policy.enforce_anti_cheat and is_protected_resource(rel_to_root.as_posix(), effective_policy):
+                    continue
+                files_to_scan.append(file_path)
 
     for file_path in files_to_scan:
         rel_posix = file_path.relative_to(root).as_posix()

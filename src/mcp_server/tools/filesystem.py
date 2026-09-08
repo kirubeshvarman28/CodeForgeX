@@ -6,10 +6,16 @@ Provides deterministic, security-bounded file listing and reading operations.
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from mcp_server.security.sandbox import is_ignored_path, resolve_safe_path
+from mcp_server.security.sandbox import (
+    DEFAULT_SECURITY_POLICY,
+    ResourceLimitExceededError,
+    SecurityPolicy,
+    is_ignored_path,
+    is_protected_resource,
+    resolve_safe_path,
+)
 
 MAX_READ_LINES = 1000
-MAX_READ_BYTES = 2 * 1024 * 1024  # 2MB maximum per read
 
 
 def list_files_impl(
@@ -17,6 +23,7 @@ def list_files_impl(
     directory: str = "",
     recursive: bool = True,
     max_depth: int = 10,
+    policy: Optional[SecurityPolicy] = None,
 ) -> Dict[str, Any]:
     """List files in the repository within safe boundaries.
 
@@ -25,12 +32,14 @@ def list_files_impl(
         directory: Relative subfolder inside the repository (empty string for root).
         recursive: Whether to list recursively.
         max_depth: Maximum recursion depth.
+        policy: Optional active SecurityPolicy.
 
     Returns:
         Structured dict with directory, total_entries, and entries list.
     """
     root = Path(repo_root).resolve()
-    target_dir = resolve_safe_path(root, directory, must_exist=True)
+    effective_policy = policy if policy is not None else DEFAULT_SECURITY_POLICY
+    target_dir = resolve_safe_path(root, directory, must_exist=True, policy=effective_policy)
 
     if not target_dir.is_dir():
         raise NotADirectoryError(f"Target path is not a directory: {directory}")
@@ -47,10 +56,13 @@ def list_files_impl(
             return
 
         for child in children:
-            if is_ignored_path(child.name):
+            if is_ignored_path(child.name, effective_policy.ignored_dirs):
                 continue
 
             rel_path = child.relative_to(root).as_posix()
+            if effective_policy.enforce_anti_cheat and is_protected_resource(rel_path, effective_policy):
+                continue
+
             is_directory = child.is_dir()
             size = 0
             if not is_directory:
@@ -83,6 +95,7 @@ def read_file_impl(
     start_line: int = 1,
     end_line: Optional[int] = None,
     max_lines: int = MAX_READ_LINES,
+    policy: Optional[SecurityPolicy] = None,
 ) -> Dict[str, Any]:
     """Read file content with line windowing and security containment.
 
@@ -92,21 +105,24 @@ def read_file_impl(
         start_line: 1-indexed start line number (inclusive).
         end_line: 1-indexed end line number (inclusive). If None, reads up to max_lines.
         max_lines: Safety ceiling on maximum lines returned in a single call.
+        policy: Optional active SecurityPolicy.
 
     Returns:
         Structured dict with path, line metadata, and file content.
     """
     root = Path(repo_root).resolve()
-    file_path = resolve_safe_path(root, path, must_exist=True)
+    effective_policy = policy if policy is not None else DEFAULT_SECURITY_POLICY
+    file_path = resolve_safe_path(root, path, must_exist=True, policy=effective_policy)
 
     if not file_path.is_file():
         raise IsADirectoryError(f"Target path is a directory, not a file: {path}")
 
     # Check file size before reading entire file
     stat = file_path.stat()
-    if stat.st_size > MAX_READ_BYTES:
-        raise ValueError(
-            f"File '{path}' exceeds max allowed size of {MAX_READ_BYTES} bytes (actual: {stat.st_size} bytes)."
+    if stat.st_size > effective_policy.max_file_read_bytes:
+        raise ResourceLimitExceededError(
+            f"File '{path}' exceeds max allowed size of {effective_policy.max_file_read_bytes} bytes "
+            f"(actual: {stat.st_size} bytes)."
         )
 
     # Read bytes and check for binary characters
