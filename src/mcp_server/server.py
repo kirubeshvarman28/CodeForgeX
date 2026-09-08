@@ -182,6 +182,7 @@ def create_mcp_server(
                 test_target=test_target,
                 timeout_seconds=timeout_seconds,
                 store=store,
+                policy=policy,
             )
             return json.dumps(result, indent=2)
         except (PathTraversalError, FileNotFoundError, SecuritySandboxError) as err:

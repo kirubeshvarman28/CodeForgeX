@@ -100,7 +100,7 @@ def apply_patch_impl(
         normalized_patch += "\n"
 
     # Step 1: Dry-run check with git apply --check
-    check_args = ["git", "apply", "--check", "--verbose"]
+    check_args = ["git", "apply", "--ignore-whitespace", "--check", "--verbose"]
     check_proc = subprocess.run(
         check_args,
         input=normalized_patch,
@@ -112,14 +112,14 @@ def apply_patch_impl(
     if check_proc.returncode != 0:
         # If -p1 check failed, try -p0 (for patches without a/ b/ prefixes)
         check_p0 = subprocess.run(
-            ["git", "apply", "-p0", "--check", "--verbose"],
+            ["git", "apply", "-p0", "--ignore-whitespace", "--check", "--verbose"],
             input=normalized_patch,
             text=True,
             cwd=str(root),
             capture_output=True,
         )
         if check_p0.returncode == 0:
-            apply_args = ["git", "apply", "-p0", "--whitespace=fix"]
+            apply_args = ["git", "apply", "-p0", "--ignore-whitespace", "--whitespace=fix"]
         else:
             err_msg = check_proc.stderr.strip() or check_proc.stdout.strip() or "Patch does not apply cleanly."
             return {
@@ -128,7 +128,7 @@ def apply_patch_impl(
                 "error": f"Patch dry-run validation failed: {err_msg}",
             }
     else:
-        apply_args = ["git", "apply", "--whitespace=fix"]
+        apply_args = ["git", "apply", "--ignore-whitespace", "--whitespace=fix"]
 
     # Step 2: Actually apply the patch
     apply_proc = subprocess.run(

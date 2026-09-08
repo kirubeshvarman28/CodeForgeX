@@ -1,0 +1,11 @@
+{
+  "author": "CodeForgeX Architecture Team",
+  "version": "1.0.0",
+  "tags": [
+    "pricing",
+    "math",
+    "validation",
+    "bug_fix"
+  ],
+  "estimated_minutes": 10
+}

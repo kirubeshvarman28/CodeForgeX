@@ -1,0 +1,20 @@
+{
+  "task_id": "bug_fix_001",
+  "category": "bug_fix",
+  "title": "Fix percentage discount calculation in pricing module",
+  "description": "In the pricing module (src/pricing.py), the `calculate_discounted_price` function incorrectly subtracts the raw percentage rate as a flat currency amount rather than calculating the percentage proportion from the price. In addition, it fails to validate that the discount percentage is within the legal bounds of 0.0 to 100.0 inclusive, raising a ValueError for invalid percentages. Fix the calculation so that a $50 item with a 20% discount correctly yields $40.00, and ensure input validation is strictly enforced without altering existing function signatures.",
+  "difficulty": "easy",
+  "timeout_seconds": 300,
+  "public_test_targets": [
+    "tests/test_pricing.py"
+  ],
+  "hidden_test_targets": [
+    "tests/test_pricing_hidden.py"
+  ],
+  "metadata": {
+    "component": "pricing",
+    "expected_files_modified": [
+      "src/pricing.py"
+    ]
+  }
+}

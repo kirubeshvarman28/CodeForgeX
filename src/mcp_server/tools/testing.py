@@ -15,7 +15,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from mcp_server.security.sandbox import resolve_safe_path
+from mcp_server.security.sandbox import (
+    DEFAULT_SECURITY_POLICY,
+    SecurityPolicy,
+    resolve_safe_path,
+)
 
 MAX_STDOUT_SUMMARY_CHARS = 10000
 DEFAULT_TIMEOUT_SECONDS = 30
@@ -141,6 +145,7 @@ def run_tests_impl(
     test_target: str = "",
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     store: Optional[TestRunStore] = None,
+    policy: Optional[SecurityPolicy] = None,
 ) -> Dict[str, Any]:
     """Execute pytest within the repository sandbox and capture deterministic results.
 
@@ -149,12 +154,14 @@ def run_tests_impl(
         test_target: Optional test target path or nodeid (e.g. 'tests/test_app.py::test_func').
         timeout_seconds: Hard execution timeout in seconds.
         store: Optional TestRunStore instance (defaults to GLOBAL_TEST_STORE).
+        policy: Optional active SecurityPolicy.
 
     Returns:
         Structured test result dictionary.
     """
     root = Path(repo_root).resolve()
     target_store = store if store is not None else GLOBAL_TEST_STORE
+    effective_policy = policy if policy is not None else DEFAULT_SECURITY_POLICY
 
     # Bound timeout to prevent invalid / extreme values
     if timeout_seconds < 1:
@@ -168,7 +175,7 @@ def run_tests_impl(
         # Handle pytest nodeid format (file.py::test_case)
         parts = test_target.strip().split("::", 1)
         file_part = parts[0]
-        safe_file = resolve_safe_path(root, file_part, must_exist=True)
+        safe_file = resolve_safe_path(root, file_part, must_exist=True, policy=effective_policy)
         rel_file = safe_file.relative_to(root).as_posix()
         resolved_target_arg = f"{rel_file}::{parts[1]}" if len(parts) > 1 else rel_file
 

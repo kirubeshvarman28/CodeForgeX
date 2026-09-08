@@ -1,0 +1,14 @@
+--- a/src/pricing.py
++++ b/src/pricing.py
+@@ -19,7 +19,8 @@
+     if price < 0.0:
+         raise ValueError("Price cannot be negative.")
+ 
+-    # BUG 1: Missing bounds check on discount_percent (negative or > 100.0)
+-    # BUG 2: Subtracts discount_percent as a flat dollar amount rather than percentage!
+-    discounted = price - discount_percent
++    if not (0.0 <= discount_percent <= 100.0):
++        raise ValueError("discount_percent must be between 0.0 and 100.0.")
++
++    discounted = price * (1.0 - (discount_percent / 100.0))
+     return round(discounted, 2)
