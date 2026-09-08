@@ -14,6 +14,8 @@ from typing import Any, Dict, Optional
 from mcp.server.mcpserver import MCPServer
 from mcp_server.security.sandbox import PathTraversalError, SecuritySandboxError
 from mcp_server.tools.filesystem import list_files_impl, read_file_impl
+from mcp_server.tools.git import get_git_diff_impl, get_repository_status_impl
+from mcp_server.tools.patching import apply_patch_impl
 from mcp_server.tools.search import search_code_impl
 from mcp_server.tools.testing import (
     GLOBAL_TEST_STORE,
@@ -200,6 +202,73 @@ def create_mcp_server(
         except Exception as err:
             return json.dumps({"error": f"Unexpected error: {err}", "success": False})
 
+    @server.tool()
+    def apply_patch(
+        patch: str,
+        file_path: str = "",
+    ) -> str:
+        """Atomically apply a unified diff patch to repository files.
+
+        Args:
+            patch: The unified diff content (e.g., standard 'diff --git' or '--- / +++' format).
+            file_path: Optional relative target path if targeting a single file.
+
+        Returns:
+            JSON string with success status, list of changed files, and status message.
+        """
+        try:
+            result = apply_patch_impl(
+                repo_root=resolved_root,
+                patch=patch,
+                file_path=file_path.strip() if file_path.strip() else None,
+            )
+            return json.dumps(result, indent=2)
+        except (PathTraversalError, ValueError, SecuritySandboxError) as err:
+            return json.dumps({"error": str(err), "success": False})
+        except Exception as err:
+            return json.dumps({"error": f"Unexpected error: {err}", "success": False})
+
+    @server.tool()
+    def get_git_diff(
+        path: str = "",
+        cached: bool = False,
+    ) -> str:
+        """Retrieve the deterministic Git diff of changes made in the repository.
+
+        Args:
+            path: Optional relative file or directory path to scope the diff.
+            cached: If True, inspects staged changes (git diff --cached) (default: False).
+
+        Returns:
+            JSON string containing diff string, has_changes boolean, and changed_files list.
+        """
+        try:
+            result = get_git_diff_impl(
+                repo_root=resolved_root,
+                path=path,
+                cached=cached,
+            )
+            return json.dumps(result, indent=2)
+        except (PathTraversalError, RuntimeError, SecuritySandboxError) as err:
+            return json.dumps({"error": str(err), "success": False})
+        except Exception as err:
+            return json.dumps({"error": f"Unexpected error: {err}", "success": False})
+
+    @server.tool()
+    def get_repository_status() -> str:
+        """Inspect the current Git repository status (modified, staged, untracked files).
+
+        Returns:
+            JSON string with branch, clean flag, and lists of modified/staged/untracked files.
+        """
+        try:
+            result = get_repository_status_impl(repo_root=resolved_root)
+            return json.dumps(result, indent=2)
+        except (RuntimeError, SecuritySandboxError) as err:
+            return json.dumps({"error": str(err), "success": False})
+        except Exception as err:
+            return json.dumps({"error": f"Unexpected error: {err}", "success": False})
+
     @server.resource(uri="repo://overview")
     def get_repo_overview() -> str:
         """Resource providing high-level repository metadata and bounded root location."""
@@ -211,6 +280,9 @@ def create_mcp_server(
                 "search_code",
                 "run_tests",
                 "get_test_output",
+                "apply_patch",
+                "get_git_diff",
+                "get_repository_status",
             ],
             "status": "ready",
         }, indent=2)

@@ -18,6 +18,14 @@ def dummy_repo(tmp_path: Path) -> Path:
     (repo / "tests").mkdir()
     (repo / "tests" / "test_calc.py").write_text("from calc import add\ndef test_add(): assert add(1, 2) == 3\n", encoding="utf-8")
 
+    # Initialize Git repository
+    import subprocess
+    subprocess.run(["git", "init", "-b", "main"], cwd=str(repo), check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Tester"], cwd=str(repo), check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=str(repo), check=True, capture_output=True)
+    subprocess.run(["git", "add", "."], cwd=str(repo), check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "initial commit"], cwd=str(repo), check=True, capture_output=True)
+
     return repo
 
 
@@ -33,6 +41,9 @@ async def test_mcp_server_lists_tools(dummy_repo: Path):
     assert "search_code" in tool_names
     assert "run_tests" in tool_names
     assert "get_test_output" in tool_names
+    assert "apply_patch" in tool_names
+    assert "get_git_diff" in tool_names
+    assert "get_repository_status" in tool_names
 
     # Check descriptions
     list_tool = next(t for t in tools if t.name == "list_files")
@@ -137,4 +148,38 @@ async def test_mcp_server_call_run_tests_and_get_output(dummy_repo: Path):
     assert out_data["run_id"] == run_id
     assert out_data["passed"] == 1
     assert "1 passed" in out_data["stdout"]
+
+
+@pytest.mark.anyio
+async def test_mcp_server_call_patch_and_git_diff(dummy_repo: Path):
+    """Verify calling apply_patch, get_git_diff, and get_repository_status via server.call_tool."""
+    server = create_mcp_server(dummy_repo)
+
+    # 1. Inspect initial clean status
+    status_res = await server.call_tool("get_repository_status", {})
+    assert not status_res.is_error
+    status = json.loads(status_res.content[0].text)
+    assert status["clean"] is True
+
+    # 2. Apply patch
+    patch = (
+        "--- a/src/calc.py\n"
+        "+++ b/src/calc.py\n"
+        "@@ -1,2 +1,2 @@\n"
+        " def add(a, b):\n"
+        "-    return a + b\n"
+        "+    return (a + b) * 1\n"
+    )
+    patch_res = await server.call_tool("apply_patch", {"patch": patch})
+    assert not patch_res.is_error
+    patch_data = json.loads(patch_res.content[0].text)
+    assert patch_data["success"] is True
+
+    # 3. Verify git diff through server
+    diff_res = await server.call_tool("get_git_diff", {})
+    assert not diff_res.is_error
+    diff_data = json.loads(diff_res.content[0].text)
+    assert diff_data["has_changes"] is True
+    assert "+    return (a + b) * 1" in diff_data["diff"]
+
 
