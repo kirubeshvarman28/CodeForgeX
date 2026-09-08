@@ -185,10 +185,10 @@ def is_ignored_path(path: Path | str, ignored_dirs: Optional[Set[str]] = None) -
     return any(part in dirs for part in parts)
 
 
-def is_protected_resource(relative_path: str, policy: Optional[SecurityPolicy] = None) -> bool:
+def is_protected_resource(relative_path: Path | str, policy: Optional[SecurityPolicy] = None) -> bool:
     """Check whether a path targets protected evaluator internals, solutions, or hidden tests."""
     effective_policy = policy if policy is not None else DEFAULT_SECURITY_POLICY
-    normalized = relative_path.replace("\\", "/")
+    normalized = str(relative_path).replace("\\", "/")
     for pattern in effective_policy.protected_patterns:
         if re.search(pattern, normalized, re.IGNORECASE):
             return True
