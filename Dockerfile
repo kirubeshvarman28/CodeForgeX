@@ -70,5 +70,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 # Set container entrypoint
 ENTRYPOINT ["python", "scripts/docker_entrypoint.py"]
 
-# Default command runs full test suite
-CMD ["--test"]
+# Default command runs MCP server in streamable-http web mode (on $PORT)
+CMD ["--server", "--transport", "streamable-http"]
+

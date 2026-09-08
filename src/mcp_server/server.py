@@ -316,7 +316,82 @@ def create_mcp_server(
             "4. Use `run_tests` to observe current test suite results and verify baseline behavior."
         )
 
+    @server.custom_route(path="/", methods=["GET"])
+    async def handle_root(request: Any) -> Any:
+        """Root landing endpoint providing health status and MCP endpoint information."""
+        from starlette.responses import HTMLResponse, JSONResponse
+
+        accept = request.headers.get("accept", "")
+        payload = {
+            "name": "CodeForgeX MCP Server",
+            "status": "online",
+            "version": "0.1.0",
+            "mcp_endpoint": "/mcp",
+            "transport": "streamable-http",
+            "docs": "https://github.com/kirubeshvarman28/CodeForgeX",
+            "tools_count": 8,
+            "tools": [
+                "list_files",
+                "read_file",
+                "search_code",
+                "run_tests",
+                "get_test_output",
+                "apply_patch",
+                "get_git_diff",
+                "get_repository_status",
+            ],
+        }
+        if "text/html" in accept:
+            html = """<!DOCTYPE html>
+<html>
+<head>
+    <title>CodeForgeX MCP Server</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; max-width: 600px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .badge { display: inline-block; background: #10b981; color: #0f172a; font-weight: bold; font-size: 12px; padding: 4px 10px; border-radius: 9999px; text-transform: uppercase; margin-bottom: 16px; }
+        h1 { margin: 0 0 8px 0; font-size: 24px; }
+        p { color: #94a3b8; font-size: 14px; line-height: 1.5; margin: 0 0 20px 0; }
+        .endpoint-box { background: #0f172a; border: 1px solid #475569; border-radius: 8px; padding: 12px 16px; font-family: monospace; font-size: 14px; color: #38bdf8; margin-bottom: 20px; word-break: break-all; }
+        .tools-list { list-style: none; padding: 0; margin: 0 0 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .tools-list li { background: #0f172a; padding: 8px 12px; border-radius: 6px; font-family: monospace; font-size: 12px; border: 1px solid #334155; color: #cbd5e1; }
+        a { color: #38bdf8; text-decoration: none; font-size: 14px; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <span class="badge">&#9679; Online &amp; Ready</span>
+        <h1>CodeForgeX MCP Server</h1>
+        <p>Deterministic AI-Agent Evaluation &amp; Software Engineering Tools over Model Context Protocol.</p>
+        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 6px;">MCP Streamable HTTP Endpoint:</div>
+        <div class="endpoint-box">/mcp</div>
+        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">Active Tools (8):</div>
+        <ul class="tools-list">
+            <li>&#10003; list_files</li>
+            <li>&#10003; read_file</li>
+            <li>&#10003; search_code</li>
+            <li>&#10003; run_tests</li>
+            <li>&#10003; get_test_output</li>
+            <li>&#10003; apply_patch</li>
+            <li>&#10003; get_git_diff</li>
+            <li>&#10003; get_repository_status</li>
+        </ul>
+        <a href="https://github.com/kirubeshvarman28/CodeForgeX" target="_blank">View GitHub Repository &amp; Documentation &rarr;</a>
+    </div>
+</body>
+</html>"""
+            return HTMLResponse(content=html, status_code=200)
+        return JSONResponse(content=payload, status_code=200)
+
+    @server.custom_route(path="/health", methods=["GET"])
+    async def handle_health(request: Any) -> Any:
+        """Healthcheck route returning service status."""
+        from starlette.responses import JSONResponse
+        return JSONResponse({"status": "healthy", "service": "codeforgex-mcp"}, status_code=200)
+
     return server
+
 
 
 async def _run_server_main(

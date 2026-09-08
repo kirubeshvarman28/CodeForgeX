@@ -115,8 +115,12 @@ def main() -> int:
     elif parsed.server:
         return run_mcp_server(extra)
     else:
+        # If PORT or MCP_TRANSPORT is set in environment, default to running MCP server
+        if os.environ.get("PORT") or os.environ.get("MCP_TRANSPORT"):
+            return run_mcp_server(extra)
         # Default to running tests
         return run_tests(extra)
+
 
 
 if __name__ == "__main__":
