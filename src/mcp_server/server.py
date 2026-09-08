@@ -4,12 +4,14 @@ Exposes security-contained repository exploration, code reading, and search tool
 via the official MCP Python SDK v2 (MCPServer).
 """
 
+import argparse
 import asyncio
 import json
 import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
+
 
 from mcp.server.mcpserver import MCPServer
 from mcp_server.security.sandbox import (
@@ -317,16 +319,25 @@ def create_mcp_server(
     return server
 
 
-async def _run_server_main():
+async def _run_server_main(repo_root: Optional[str] = None):
     """Main asynchronous entry point to launch MCP server over stdio."""
-    server = create_mcp_server()
+    server = create_mcp_server(repo_root=repo_root)
     await server.run_stdio_async()
 
 
 def main():
     """Synchronous entry point for the CLI / module execution."""
+    parser = argparse.ArgumentParser(description="CodeForgeX MCP Software Engineering Server")
+    parser.add_argument(
+        "--repo-root",
+        "-r",
+        type=str,
+        default=None,
+        help="Repository root directory to bound tool operations (defaults to REPO_ROOT env var or current directory)",
+    )
+    args, _ = parser.parse_known_args()
     try:
-        asyncio.run(_run_server_main())
+        asyncio.run(_run_server_main(repo_root=args.repo_root))
     except KeyboardInterrupt:
         sys.exit(0)
 
