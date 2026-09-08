@@ -1,0 +1,36 @@
+# Version Control & Environments
+.git
+.gitignore
+.venv
+venv
+env
+
+# Bytecode & Caches
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.coverage
+htmlcov
+
+# Temporary workspaces & scratch data
+scratch/
+debug_ws/
+*.log
+
+# Build & Distribution artifacts
+dist/
+build/
+*.egg-info/
+
+# Secrets & Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,75 @@
+version: "3.8"
+
+services:
+  # Service 1: Automated Benchmark Evaluation Service
+  codeforge-eval:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codeforge-evaluator
+    command: ["--evaluate-all"]
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONPATH=/app/src
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m
+      - /app/scratch:rw,size=512m
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+  # Service 2: Regression Test Suite Runner
+  codeforge-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codeforge-test-runner
+    command: ["--test"]
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONPATH=/app/src
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m
+      - /app/scratch:rw,size=512m
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M
+
+  # Service 3: Standalone Interactive MCP Server over stdio
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codeforge-mcp-server
+    command: ["--server"]
+    stdin_open: true
+    tty: true
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app/src
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
