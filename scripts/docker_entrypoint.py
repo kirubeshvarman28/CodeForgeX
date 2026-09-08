@@ -83,10 +83,11 @@ def evaluate_all_tasks() -> int:
     return 0 if overall_passed else 1
 
 
-def run_mcp_server() -> int:
-    """Launch the MCP server process over stdio."""
-    print("[CodeForgeX Container] Launching MCP Server over stdio ...")
-    proc = subprocess.run([sys.executable, "-m", "mcp_server"])
+def run_mcp_server(extra_args: list[str] | None = None) -> int:
+    """Launch the MCP server process over stdio or HTTP/SSE."""
+    cmd = [sys.executable, "-m", "mcp_server"] + (extra_args or [])
+    print(f"[CodeForgeX Container] Launching MCP Server: {' '.join(cmd)}")
+    proc = subprocess.run(cmd)
     return proc.returncode
 
 
@@ -96,7 +97,7 @@ def main() -> int:
     parser.add_argument("--test", action="store_true", help="Run pytest test suite")
     parser.add_argument("--evaluate", type=str, metavar="TASK_ID", help="Evaluate a specific benchmark task")
     parser.add_argument("--evaluate-all", action="store_true", help="Evaluate all discovered benchmark tasks")
-    parser.add_argument("--server", action="store_true", help="Launch MCP Server over stdio")
+    parser.add_argument("--server", action="store_true", help="Launch MCP Server over stdio or HTTP")
 
     # If no recognized flag is passed, pass raw arguments to pytest or subshell
     if len(sys.argv) > 1 and sys.argv[1] not in ("--test", "--evaluate", "--evaluate-all", "--server", "-h", "--help"):
@@ -112,7 +113,7 @@ def main() -> int:
     elif parsed.evaluate_all:
         return evaluate_all_tasks()
     elif parsed.server:
-        return run_mcp_server()
+        return run_mcp_server(extra)
     else:
         # Default to running tests
         return run_tests(extra)

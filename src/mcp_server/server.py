@@ -319,10 +319,22 @@ def create_mcp_server(
     return server
 
 
-async def _run_server_main(repo_root: Optional[str] = None):
-    """Main asynchronous entry point to launch MCP server over stdio."""
+async def _run_server_main(
+    repo_root: Optional[str] = None,
+    transport: str = "stdio",
+    host: str = "0.0.0.0",
+    port: int = 8000,
+):
+    """Main asynchronous entry point to launch MCP server over stdio or HTTP/SSE."""
     server = create_mcp_server(repo_root=repo_root)
-    await server.run_stdio_async()
+    if transport == "streamable-http":
+        print(f"[CodeForgeX] Starting Streamable HTTP server on http://{host}:{port}/mcp ...")
+        await server.run_streamable_http_async(host=host, port=port)
+    elif transport == "sse":
+        print(f"[CodeForgeX] Starting SSE server on http://{host}:{port}/sse ...")
+        await server.run_sse_async(host=host, port=port)
+    else:
+        await server.run_stdio_async()
 
 
 def main():
@@ -335,9 +347,37 @@ def main():
         default=None,
         help="Repository root directory to bound tool operations (defaults to REPO_ROOT env var or current directory)",
     )
+    parser.add_argument(
+        "--transport",
+        "-t",
+        type=str,
+        choices=["stdio", "streamable-http", "sse"],
+        default=os.environ.get("MCP_TRANSPORT", "stdio"),
+        help="MCP transport protocol (stdio, streamable-http, or sse; default: stdio)",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default=os.environ.get("HOST", "0.0.0.0"),
+        help="Host interface to bind HTTP/SSE server (default: 0.0.0.0)",
+    )
+    parser.add_argument(
+        "--port",
+        "-p",
+        type=int,
+        default=int(os.environ.get("PORT", "8000")),
+        help="Port to bind HTTP/SSE server (default: 8000 or $PORT)",
+    )
     args, _ = parser.parse_known_args()
     try:
-        asyncio.run(_run_server_main(repo_root=args.repo_root))
+        asyncio.run(
+            _run_server_main(
+                repo_root=args.repo_root,
+                transport=args.transport,
+                host=args.host,
+                port=args.port,
+            )
+        )
     except KeyboardInterrupt:
         sys.exit(0)
 
