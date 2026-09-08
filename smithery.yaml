@@ -1,0 +1,9 @@
+# Smithery configuration for CodeForgeX MCP Server
+# Enables 1-click installation across Claude, Cursor, Windsurf, and Zed
+startCommand:
+  type: stdio
+  config:
+    command: "python"
+    args: ["-m", "mcp_server"]
+    env:
+      PYTHONPATH: "src"
