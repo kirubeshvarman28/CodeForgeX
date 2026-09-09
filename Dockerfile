@@ -44,7 +44,8 @@ RUN python -m venv /opt/venv && \
 WORKDIR /app
 
 # Copy dependency configuration first to optimize Docker layer caching
-COPY --chown=codeforge:codeforge pyproject.toml README.md ./
+COPY --chown=codeforge:codeforge pyproject.toml README.md Dockerfile docker-compose.yml .dockerignore ./
+
 
 # Install project dependencies into virtual environment
 RUN /opt/venv/bin/pip install --upgrade pip setuptools wheel && \
@@ -77,6 +78,8 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 
 # Set container entrypoint
 ENTRYPOINT ["python", "scripts/docker_entrypoint.py"]
+
+
 
 # Default command runs MCP server in streamable-http web mode (on $PORT)
 CMD ["--server", "--transport", "streamable-http"]

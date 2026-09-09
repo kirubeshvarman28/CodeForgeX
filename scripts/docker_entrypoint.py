@@ -19,10 +19,11 @@ from tasks.loader import discover_tasks, load_task_solution
 
 def run_tests(args: list[str]) -> int:
     """Execute pytest within container environment."""
-    cmd = ["pytest"] + (args if args else ["-v"])
+    cmd = [sys.executable, "-m", "pytest"] + (args if args else ["-v"])
     print(f"[CodeForgeX Container] Executing tests: {' '.join(cmd)}")
     proc = subprocess.run(cmd)
     return proc.returncode
+
 
 
 def evaluate_single_task(task_id: str) -> int:
