@@ -63,6 +63,14 @@ RUN mkdir -p /app/scratch && \
 # Drop root privileges and switch to unprivileged user
 USER codeforge
 
+# Configure git identity and safe.directory for unprivileged user
+RUN git config --global user.name "CodeForgeX Agent" && \
+    git config --global user.email "agent@codeforgex.internal" && \
+    git config --global init.defaultBranch main && \
+    git config --global core.autocrlf false && \
+    git config --global --add safe.directory '*'
+
+
 # Define healthcheck to verify core environment imports
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD python -c "import mcp_server; import evaluator; import tasks; import agent; print('CodeForgeX healthy')" || exit 1

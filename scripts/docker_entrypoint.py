@@ -93,7 +93,11 @@ def run_mcp_server(extra_args: list[str] | None = None) -> int:
 
 def main() -> int:
     """Main CLI entrypoint."""
+    # Ensure git safe.directory is configured for unprivileged container operations
+    subprocess.run(["git", "config", "--global", "--add", "safe.directory", "*"], capture_output=True)
+
     parser = argparse.ArgumentParser(description="CodeForgeX Container Execution Harness")
+
     parser.add_argument("--test", action="store_true", help="Run pytest test suite")
     parser.add_argument("--evaluate", type=str, metavar="TASK_ID", help="Evaluate a specific benchmark task")
     parser.add_argument("--evaluate-all", action="store_true", help="Evaluate all discovered benchmark tasks")
