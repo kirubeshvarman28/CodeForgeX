@@ -330,6 +330,15 @@ def main() -> int:
     )
     parser.add_argument("--tasks-dir", type=str, default="tasks", help="Tasks repository path (default: 'tasks')")
     parser.add_argument("--output-dir", type=str, default="results", help="Directory to save evaluation reports (default: 'results')")
+    parser.add_argument(
+        "--format",
+        "-f",
+        type=str,
+        choices=["table", "json", "markdown"],
+        default="table",
+        help="Output format (default: 'table')",
+    )
+
 
     args = parser.parse_args()
 

@@ -45,15 +45,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: actions/setup-buildx-action@v3
-
       - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          tags: codeforgex:latest
+        run: docker build -t codeforgex:latest .
 
       - name: Run container verification
         run: |
